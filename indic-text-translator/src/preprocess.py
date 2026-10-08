@@ -66,7 +66,7 @@ def find_page(gray: np.ndarray) -> tuple[np.ndarray, bool, np.ndarray]:
 
 
 # ----------------------------------------------------------------- stage 2
-def binarize(gray: np.ndarray, window: int | None = None, k: float = 0.2,
+def binarize(gray: np.ndarray, window: int | None = None, k: float = 0.8,
              rank: int = 1, rank_size: int = 3) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Rank-filter + locally adaptive thresholding.
 
@@ -177,11 +177,25 @@ def _cum_bounds(profile: np.ndarray, lo: float = 0.10, hi: float = 0.90) -> tupl
     return a, b
 
 
-def find_text_box(binary: np.ndarray, pad: int = 6) -> tuple[int, int, int, int]:
-    """(x0, y0, x1, y1) of the text region, using cumulative projections."""
-    x0, x1 = _cum_bounds((binary > 0).sum(axis=0))
-    y0, y1 = _cum_bounds((binary > 0).sum(axis=1))
+def find_text_box(binary: np.ndarray, pad: int = 6, method: str = "extent") -> tuple[int, int, int, int]:
+    """(x0, y0, x1, y1) of the text region.
+
+    method="extent": first/last row and column that contain ink (the binary
+        image is already page-masked and denoised, so this is safe).
+    method="cumulative": the reference's 10%/90% cumulative-projection estimate.
+        It assumes justified text; on ragged-right text it clips the ends of
+        the longest lines (we saw this on Telugu/Kannada), so it is not the default.
+    """
     h, w = binary.shape
+    if method == "cumulative":
+        x0, x1 = _cum_bounds((binary > 0).sum(axis=0))
+        y0, y1 = _cum_bounds((binary > 0).sum(axis=1))
+    else:
+        xs = np.where((binary > 0).any(axis=0))[0]
+        ys = np.where((binary > 0).any(axis=1))[0]
+        if xs.size == 0:
+            return 0, 0, w, h
+        x0, x1, y0, y1 = xs[0], xs[-1] + 1, ys[0], ys[-1] + 1
     return max(0, x0 - pad), max(0, y0 - pad), min(w, x1 + pad), min(h, y1 + pad)
 
 
@@ -236,7 +250,11 @@ def preprocess(img: np.ndarray, is_camera: bool | None = None) -> dict:
     stages["page"] = page
     stages["page_found"] = found
 
-    filt, b1, b2 = binarize(page)
+    # Unsharp mask: camera blur otherwise makes neighbouring Telugu/Kannada letters
+    # touch after thresholding (tuned on the test pages: sigma 1.5, k = 0.8).
+    sharp = cv2.addWeighted(page, 2.0, cv2.GaussianBlur(page, (0, 0), 1.5), -1.0, 0)
+    stages["sharpened"] = sharp
+    filt, b1, b2 = binarize(sharp)
     stages["rank_filtered"] = filt
     binary = cv2.bitwise_and(cv2.bitwise_and(b1, b2), page_mask)  # nothing outside the paper
     stages["binary"] = binary

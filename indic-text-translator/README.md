@@ -11,7 +11,7 @@ deep-translator (translation), Streamlit (demo).
 ## Status
 - [x] M1  fonts + test data  (`python src/make_data.py`)
 - [x] M2  preprocessing pipeline (`python src/run_preprocess.py`)
-- [ ] M3  character/unit segmentation
+- [x] M3  unit segmentation (`python src/run_segment.py`)
 - [ ] M4  template database + XOR matcher
 - [ ] M5  SVD/PCA + SIFT matchers, accuracy table
 - [ ] M6  translation + Streamlit demo
