@@ -1,4 +1,6 @@
-# Indic Text Translator (IPCV lab project)
+# IndicLens
+
+Classical image-processing recognition and translation of Hindi, Telugu and Kannada text from photos.
 
 Photo of printed Hindi / Telugu / Kannada text -> English translation, using classical
 image processing only (after the Thai EE368 reference project).
