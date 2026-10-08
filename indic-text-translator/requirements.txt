@@ -1,0 +1,10 @@
+opencv-python
+numpy
+scipy
+scikit-image
+pillow
+fonttools
+matplotlib
+deep-translator
+streamlit
+pytest
